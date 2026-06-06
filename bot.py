@@ -6,15 +6,13 @@ CHANNEL = os.getenv("TELEGRAM_CHANNEL")
 
 url = f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage"
 
-text = """
-🔥 Тестове повідомлення
+text = "🔥 Тест. Бот працює."
 
-Якщо ти бачиш це повідомлення в каналі, бот працює.
-"""
-
-requests.post(url, json={
+response = requests.post(url, json={
     "chat_id": CHANNEL,
     "text": text
 })
 
-print("Message sent")
+print("Status:", response.status_code)
+print("Response:", response.text)
+print("Channel:", CHANNEL)
