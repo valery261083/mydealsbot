@@ -4,9 +4,18 @@ import requests
 BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
 CHANNEL = os.getenv("TELEGRAM_CHANNEL")
 
-url = f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage"
+text = """
+🔥 Знижка на Amazon.se
 
-text = "🔥 Тест. Бот працює."
+Товар: Приклад навушників
+Було: 999 kr
+Зараз: 299 kr
+Знижка: -70%
+
+👉 https://www.amazon.se/
+"""
+
+url = f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage"
 
 response = requests.post(url, json={
     "chat_id": CHANNEL,
@@ -15,4 +24,3 @@ response = requests.post(url, json={
 
 print("Status:", response.status_code)
 print("Response:", response.text)
-print("Channel:", CHANNEL)
