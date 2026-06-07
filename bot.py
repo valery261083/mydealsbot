@@ -1,33 +1,32 @@
 import os
-import json
 import requests
+from bs4 import BeautifulSoup
 
 BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
 CHANNEL = os.getenv("TELEGRAM_CHANNEL")
 
-with open("deals.json", "r", encoding="utf-8") as f:
-    deals = json.load(f)
+headers = {
+    "User-Agent": "Mozilla/5.0"
+}
 
-deal = deals[0]
+url = "https://www.amazon.se/deals"
 
-text = f"""
-🔥 {deal['title']}
+try:
+    r = requests.get(url, headers=headers, timeout=20)
 
-Було: {deal['old_price']}
-Зараз: {deal['new_price']}
-Знижка: {deal['discount']}
+    text = f"✅ Amazon Deals сторінка доступна\nКод відповіді: {r.status_code}"
 
-👉 {deal['link']}
-"""
+except Exception as e:
+    text = f"❌ Помилка\n{e}"
 
-url = f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage"
+telegram_url = f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage"
 
 requests.post(
-    url,
+    telegram_url,
     json={
         "chat_id": CHANNEL,
         "text": text
     }
 )
 
-print("Deal sent")
+print(text)
