@@ -3,7 +3,10 @@ name: Run Telegram Bot
 on:
   workflow_dispatch:
   schedule:
-    - cron: "*/30 * * * *"
+    - cron: "*/5 * * * *"
+
+permissions:
+  contents: write
 
 jobs:
   run-bot:
@@ -22,3 +25,11 @@ jobs:
         env:
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHANNEL: ${{ secrets.TELEGRAM_CHANNEL }}
+
+      - name: Save sent links
+        run: |
+          git config user.name "github-actions"
+          git config user.email "github-actions@github.com"
+          git add sent_links.json || true
+          git commit -m "Update sent links" || echo "No changes"
+          git push || true
