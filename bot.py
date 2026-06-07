@@ -5,38 +5,36 @@ from bs4 import BeautifulSoup
 BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
 CHANNEL = os.getenv("TELEGRAM_CHANNEL")
 
+url = "https://www.pepperdeals.se/search?q=amazon"
+
 headers = {
     "User-Agent": "Mozilla/5.0"
 }
 
-search_url = "https://www.amazon.se/s?k=rea"
-
-r = requests.get(search_url, headers=headers, timeout=20)
+r = requests.get(url, headers=headers, timeout=20)
 soup = BeautifulSoup(r.text, "html.parser")
 
-products = soup.select("div[data-component-type='s-search-result']")
+text = "🔥 Знижки, повʼязані з Amazon.se:\n\n"
 
-text = "🔎 Пошук Amazon.se: rea\n\n"
+deals = soup.select("article")
 
 found = 0
 
-for product in products[:5]:
-    title_el = product.select_one("h2 span")
-    link_el = product.select_one("a.a-link-normal.s-no-outline")
-    price_el = product.select_one("span.a-price span.a-offscreen")
+for deal in deals[:5]:
+    title_el = deal.select_one("a")
+    if title_el:
+        title = title_el.get_text(" ", strip=True)
+        link = title_el.get("href")
 
-    if title_el and link_el and price_el:
-        title = title_el.get_text(strip=True)
-        price = price_el.get_text(strip=True)
-        link = "https://www.amazon.se" + link_el.get("href").split("?")[0]
+        if link and link.startswith("/"):
+            link = "https://www.pepperdeals.se" + link
 
-        text += f"🔥 {title}\n"
-        text += f"Pris: {price}\n"
-        text += f"👉 {link}\n\n"
-        found += 1
+        if title:
+            text += f"🔥 {title}\n👉 {link}\n\n"
+            found += 1
 
 if found == 0:
-    text = "❌ Товари не знайдено через пошук. Amazon блокує або ховає результати."
+    text = "❌ Не вдалося знайти знижки на Pepper Deals."
 
 telegram_url = f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage"
 
