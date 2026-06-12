@@ -9,10 +9,6 @@ CHANNEL = os.getenv("TELEGRAM_CHANNEL")
 
 SOURCES = [
     {
-        "name": "PepperDeals",
-        "url": "https://www.pepperdeals.se/search?q=amazon"
-    },
-    {
         "name": "HittaRabatter",
         "url": "https://www.hittarabatter.com/"
     },
@@ -35,40 +31,44 @@ def load_sent_links():
 
 def save_sent_links(links):
     with open("sent_links.json", "w", encoding="utf-8") as f:
-        json.dump(list(links)[-500:], f, ensure_ascii=False, indent=2)
+        json.dump(list(links)[-1000:], f, ensure_ascii=False, indent=2)
 
-def analyze_deal(text):
+def find_discount(text):
     text_low = text.lower()
 
     if "prisfel" in text_low or "felpris" in text_low:
-        return True, "⚠️ PRISFEL"
+        return "⚠️ PRISFEL"
 
     patterns = [
+        r"-(\d{2,3})\s?%",
         r"(\d{2,3})\s?%\s?rabatt",
         r"rabatt\s?(\d{2,3})\s?%",
-        r"(\d{2,3})\s?%\s?off",
-        r"discount\s?(\d{2,3})\s?%"
+        r"(\d{2,3})\s?%\s?off"
     ]
 
     for pattern in patterns:
         match = re.search(pattern, text_low)
         if match:
             percent = int(match.group(1))
-
             if percent >= 70:
-                return True, f"🔥 -{percent}%"
+                return f"🔥 -{percent}%"
 
-            if percent >= 50 and "amazon" in text_low:
-                return True, f"🔥 -{percent}% Amazon"
-
-    return False, None
+    return None
 
 def clean_text(text):
     text = re.sub(r"\s+", " ", text).strip()
     return text[:180]
 
+def normalize_title(text):
+    text = text.lower()
+    text = re.sub(r"https?://\S+", "", text)
+    text = re.sub(r"[^a-zåäö0-9а-яіїєґ ]", "", text)
+    text = re.sub(r"\s+", " ", text).strip()
+    return text[:80]
+
 sent_links = load_sent_links()
 new_sent_links = set(sent_links)
+seen_titles = set()
 found = []
 
 for source in SOURCES:
@@ -76,11 +76,15 @@ for source in SOURCES:
         r = requests.get(source["url"], headers=HEADERS, timeout=20)
         soup = BeautifulSoup(r.text, "html.parser")
 
-        for item in soup.select("article, a"):
+        for item in soup.select("article, div, a"):
             text = item.get_text(" ", strip=True)
-            ok, label = analyze_deal(text)
 
-            if not ok or len(text) < 20:
+            if len(text) < 15:
+                continue
+
+            label = find_discount(text)
+
+            if not label:
                 continue
 
             link_el = item if item.name == "a" else item.select_one("a")
@@ -95,8 +99,13 @@ for source in SOURCES:
                 base = source["url"].split("/")[0] + "//" + source["url"].split("/")[2]
                 link = base + link
 
-            if link in sent_links:
+            title_key = normalize_title(text)
+
+            if link in sent_links or title_key in seen_titles:
                 continue
+
+            seen_titles.add(title_key)
+            new_sent_links.add(link)
 
             found.append({
                 "source": source["name"],
@@ -105,13 +114,11 @@ for source in SOURCES:
                 "link": link
             })
 
-            new_sent_links.add(link)
-
     except Exception as e:
         print("Error:", source["name"], e)
 
 if found:
-    message = "🔥 Нові сильні знижки:\n\n"
+    message = "🔥 Нові гарячі знижки:\n\n"
 
     for deal in found[:10]:
         message += f"{deal['label']} | {deal['source']}\n"
@@ -127,4 +134,4 @@ if found:
     save_sent_links(new_sent_links)
     print(message)
 else:
-    print("Нових сильних знижок немає.")
+    print("Нових PRISFEL або знижок 70%+ немає.")
